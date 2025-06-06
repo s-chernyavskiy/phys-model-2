@@ -61,20 +61,6 @@
   - Решаем систему:
 
     $t = \frac{(\mathbf{a} - \mathbf{s}) \times (\mathbf{b} - \mathbf{a})}{\hat{\mathbf{d}} \times (\mathbf{b} - \mathbf{a})}, \quad u = \frac{(\mathbf{s} - \mathbf{a}) \times \hat{\mathbf{d}}}{\hat{\mathbf{d}} \times (\mathbf{b} - \mathbf{a})}$
-- Преобразование волны в цвет:
-
-$h = \frac{2000 - \lambda}{1900} \times 0.75 \quad (0 \leq h < 1)$
-
-$H' = 6h$
-
-$\quad (r,g,b) = \begin{cases} 
-(1, H'-\lfloor H'\rfloor, 0) & \lfloor H'\rfloor \mod 6 = 0 \\
-(1-(H'-\lfloor H'\rfloor), 1, 0) & \lfloor H'\rfloor \mod 6 = 1 \\
-(0, 1, H'-\lfloor H'\rfloor) & \lfloor H'\rfloor \mod 6 = 2 \\
-(0, 1-(H'-\lfloor H'\rfloor), 1) & \lfloor H'\rfloor \mod 6 = 3 \\
-(H'-\lfloor H'\rfloor, 0, 1) & \lfloor H'\rfloor \mod 6 = 4 \\
-(1, 0, 1-(H'-\lfloor H'\rfloor)) & \lfloor H'\rfloor \mod 6 = 5 
-\end{cases}$
 
 Запуск
 -
