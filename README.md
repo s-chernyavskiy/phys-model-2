@@ -47,9 +47,10 @@
     $dx = x_2 - x_1, \quad dy = y_2 - y_1$
     
     $\hat{\mathbf{n}} = \left( \frac{dy}{\sqrt{dx^2 + dy^2}}, -\frac{dx}{\sqrt{dx^2 + dy^2}} \right)$
-- Определение направления нормали:
+  - Определение направления нормали:
     
-    $\text{Если} \quad \hat{\mathbf{i}} \cdot \hat{\mathbf{n}} > 0 \quad \text{то} \quad \hat{\mathbf{n}} \leftarrow -\hat{\mathbf{n}}, \quad n_1 \leftrightarrow n_2$
+      $\text{Если} \quad \hat{\mathbf{i}} \cdot \hat{\mathbf{n}} > 0 \quad \text{то}$
+    $\quad \hat{\mathbf{n}} \leftarrow -\hat{\mathbf{n}}, \quad n_1 \leftrightarrow n_2$
 
 - Пересечение прямых
 
