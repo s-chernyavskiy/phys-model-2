@@ -3,11 +3,19 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 import pygame
+import pygame.gfxdraw
 
-WINDOW_WIDTH = 1200
+WINDOW_WIDTH = 1600
 WINDOW_HEIGHT = 1000
 CENTER_X = WINDOW_WIDTH // 2
 CENTER_Y = WINDOW_HEIGHT // 2
+
+SLIDER_WIDTH = 200
+SLIDER_HEIGHT = 20
+SLIDER_X = 20
+SLIDER_Y = 200
+SLIDER_MIN = 100
+SLIDER_MAX = 2000
 
 MATERIALS = {
     "германий": 4.1,
@@ -33,8 +41,8 @@ class Ray:
     depth: int = 0
 
 
-def wavelength_to_rgb(wavelength: float, start_x: float = None) -> Tuple[int, int, int]:
-    if start_x is not None and abs(start_x - (-500.0)) < 0.1:
+def wavelength_to_rgb(wavelength: float, is_light_on: bool, start_x: float = None) -> Tuple[int, int, int]:
+    if start_x is not None and abs(start_x - (-500.0)) < 0.1 and not is_light_on:
         return 255, 255, 255
 
     hue = (2000.0 - wavelength) / (2000.0 - 100.0) * 0.75
@@ -167,6 +175,11 @@ class RayTracer:
         self.screen = screen
         self.max_reflections = 20
         self.ray_length = 2000.0
+        self.line_width = 3
+        self.light_on = True
+
+    def set_light_state(self, light_on: bool):
+        self.light_on = light_on
 
     def trace_ray(self, ray: Ray, polygons: List[Polygon], material: str, environment: str, depth: int = 0):
         if depth >= self.max_reflections:
@@ -199,10 +212,11 @@ class RayTracer:
                     closest_normal = Point(dy / length, -dx / length)
 
         if closest_intersection:
-            rgb = wavelength_to_rgb(ray.wavelength, ray.start.x)
+            rgb = wavelength_to_rgb(ray.wavelength, self.light_on, ray.start.x)
             pygame.draw.line(self.screen, rgb,
-                             (ray.start.x + CENTER_X, ray.start.y + CENTER_Y),
-                             (closest_intersection.x + CENTER_X, closest_intersection.y + CENTER_Y))
+                            (ray.start.x + CENTER_X, ray.start.y + CENTER_Y),
+                            (closest_intersection.x + CENTER_X, closest_intersection.y + CENTER_Y),
+                            self.line_width)
 
             n1 = MATERIALS[environment]
             n2 = MATERIALS[material]
@@ -235,10 +249,11 @@ class RayTracer:
                 ray.start.x + ray.direction.x * self.ray_length,
                 ray.start.y + ray.direction.y * self.ray_length
             )
-            rgb = wavelength_to_rgb(ray.wavelength, ray.start.x)
+            rgb = wavelength_to_rgb(ray.wavelength, self.light_on, ray.start.x)
             pygame.draw.line(self.screen, rgb,
-                             (ray.start.x + CENTER_X, ray.start.y + CENTER_Y),
-                             (far_point.x + CENTER_X, far_point.y + CENTER_Y))
+                            (ray.start.x + CENTER_X, ray.start.y + CENTER_Y),
+                            (far_point.x + CENTER_X, far_point.y + CENTER_Y),
+                            self.line_width)
 
     def trace_ray_inside(self, polygon: Polygon, ray: Ray, all_polygons: List[Polygon], material: str,
                          environment: str):
@@ -270,8 +285,9 @@ class RayTracer:
             if not closest_intersection:
                 return
 
-            rgb = wavelength_to_rgb(current_ray.wavelength, current_ray.start.x)
-            draw_dashed_line(self.screen, current_ray.start, closest_intersection, rgb)
+            rgb = wavelength_to_rgb(current_ray.wavelength, self.light_on, current_ray.start.x)
+            draw_dashed_line(self.screen, current_ray.start, closest_intersection, rgb, dash_length=10.0,
+                           gap_length=5.0)
 
             n1 = MATERIALS[material]
             n2 = MATERIALS[environment]
@@ -360,6 +376,10 @@ def main():
     current_angle = 0.0
     prism_angle = 60.0
 
+    light_on = True
+    current_wavelength = 1000.0
+    slider_dragging = False
+
     font = pygame.font.Font(None, 30)
 
     running = True
@@ -392,6 +412,23 @@ def main():
                     current_environment = "сульфид ртути 2"
                 elif event.key == pygame.K_n:
                     current_environment = "германий"
+                elif event.key == pygame.K_SPACE:
+                    light_on = not light_on
+                    ray_tracer.set_light_state(light_on)
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    mouse_x, mouse_y = event.pos
+                    if (SLIDER_X <= mouse_x <= SLIDER_X + SLIDER_WIDTH and 
+                        SLIDER_Y <= mouse_y <= SLIDER_Y + SLIDER_HEIGHT):
+                        slider_dragging = True
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    slider_dragging = False
+            elif event.type == pygame.MOUSEMOTION:
+                if slider_dragging:
+                    mouse_x, _ = event.pos
+                    mouse_x = max(SLIDER_X, min(SLIDER_X + SLIDER_WIDTH, mouse_x))
+                    current_wavelength = SLIDER_MIN + (SLIDER_MAX - SLIDER_MIN) * (mouse_x - SLIDER_X) / SLIDER_WIDTH
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
@@ -404,7 +441,7 @@ def main():
             prism_angle = min(150, prism_angle + 2)
         current_angle = current_angle % 360
 
-        screen.fill((0, 0, 0))
+        screen.fill((255, 255, 255) if light_on else (0, 0, 0))
 
         polygons = []
         for i, base_polygon in enumerate(base_polygons):
@@ -415,19 +452,44 @@ def main():
 
         for polygon in polygons:
             points = [(p.x + CENTER_X, p.y + CENTER_Y) for p in polygon.vertices]
-            pygame.draw.polygon(screen, (255, 255, 255), points, 2)
+            pygame.draw.polygon(screen, (0, 0, 0) if light_on else (255, 255, 255), points, 2)
 
-        ray_tracer.trace_scene(polygons, current_material, current_environment, current_angle)
+        pygame.draw.rect(screen, (100, 100, 100), (SLIDER_X, SLIDER_Y, SLIDER_WIDTH, SLIDER_HEIGHT))
+        
+        for x in range(SLIDER_WIDTH):
+            wavelength = SLIDER_MIN + (SLIDER_MAX - SLIDER_MIN) * x / SLIDER_WIDTH
+            color = wavelength_to_rgb(wavelength, light_on)
+            pygame.draw.line(screen, color, 
+                           (SLIDER_X + x, SLIDER_Y), 
+                           (SLIDER_X + x, SLIDER_Y + SLIDER_HEIGHT))
+        
+        slider_pos = SLIDER_X + (current_wavelength - SLIDER_MIN) * SLIDER_WIDTH / (SLIDER_MAX - SLIDER_MIN)
+        pygame.draw.circle(screen, (0, 0, 0), (int(slider_pos), SLIDER_Y + SLIDER_HEIGHT // 2), 8)
 
-        material_text = font.render(f"Материал фигур: {current_material}", True, (255, 255, 255))
-        environment_text = font.render(f"Материал среды: {current_environment}", True, (255, 255, 255))
-        angle_text = font.render(f"Угол луча: {current_angle}°", True, (255, 255, 255))
-        prism_text = font.render(f"Преломляющий угол призмы: {prism_angle}°", True, (255, 255, 255))
+        if light_on:
+            ray = Ray(Point(-500.0, 0.0),
+                     Point(math.cos(math.radians(current_angle)), 
+                           math.sin(math.radians(current_angle))), 
+                     current_wavelength)
+            ray_tracer.trace_ray(ray, polygons, current_material, current_environment)
+        else:
+            ray_tracer.trace_scene(polygons, current_material, current_environment, current_angle)
+
+        text_color = (0, 0, 0) if light_on else (255, 255, 255)
+        
+        material_text = font.render(f"Материал фигур: {current_material}", True, text_color)
+        environment_text = font.render(f"Материал среды: {current_environment}", True, text_color)
+        angle_text = font.render(f"Угол луча: {current_angle}°", True, text_color)
+        prism_text = font.render(f"Преломляющий угол призмы: {prism_angle}°", True, text_color)
+        light_text = font.render(f"Свет: {'ВКЛ' if light_on else 'ВЫКЛ'}", True, text_color)
+        wavelength_text = font.render(f"Длина волны: {int(current_wavelength)} нм", True, text_color)
 
         screen.blit(material_text, (20, 20))
         screen.blit(environment_text, (WINDOW_WIDTH - 300, 20))
         screen.blit(angle_text, (20, 80))
         screen.blit(prism_text, (20, 140))
+        screen.blit(light_text, (20, 180))
+        screen.blit(wavelength_text, (20, 240))
 
         pygame.display.flip()
         clock.tick(60)
